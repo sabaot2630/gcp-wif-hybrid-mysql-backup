@@ -270,6 +270,10 @@ WantedBy=timers.target
   EXITO: Respaldo subido a gs://harvester-wif-lab-<PROJECT_ID>/backups/corp_inventory_db-20261123-181228.sql.gz
   backup-gcs.service: Deactivated successfully.
   Finished backup-gcs.service - Backup MySQL remoto hacia Google Cloud Storage via WIF.
+
+![Respaldos en Cloud Storage](docs/01-gcs-backups.png)
+![Workload Identity Pool](docs/02-wif-pool.png)
+![Logs systemd journalctl](docs/03-systemd-logs.png)
   ```
 * **Trazabilidad en GCP:** Validación de creación de recursos y políticas IAM mediante **Cloud Audit Logs** (`Admin Activity`) y confirmación de purga automática mediante **Object Lifecycle Management** en Cloud Storage.
 
