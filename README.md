@@ -5,7 +5,7 @@
 ![Infrastructure](https://img.shields.io/badge/On--Premise-Harvester_HCI_v1.7.1-2C5282?style=for-the-badge)
 ![FinOps](https://img.shields.io/badge/FinOps_Cost-$0.00_Always_Free-2E7D32?style=for-the-badge)
 
-## 1. Resumen Ejecutivo y Problema de Ingeniería
+## 1.Problema de Ingeniería
 
 Las organizaciones que operan infraestructura híbrida enfrentan un reto crítico al integrar cargas de trabajo locales con la nube pública: distribuir archivos de credenciales estáticas (llaves JSON de Service Accounts) en servidores on-premise introduce un riesgo elevado de exfiltración y compromete el cumplimiento de auditorías de seguridad. Adicionalmente, muchos entornos remotos operan detrás de enlaces **CGNAT** sin direcciones IP públicas fijas ni puertos entrantes abiertos.
 
