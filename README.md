@@ -54,3 +54,62 @@ Este proyecto resuelve ambos desafíos mediante una arquitectura híbrida **Zero
 |                                           |  - Lifecycle Rule: Delete > 7 días |  |
 |                                           +------------------------------------+  |
 +-----------------------------------------------------------------------------------+
+
+3. Controles de Seguridad y Decisiones de DiseñoCapa / DominioControl ImplementadoImpacto en Seguridad y FinOpsAutenticación CloudWorkload Identity Federation (OIDC) con JWKS público cargado en GCP y modo executable.Elimina llaves JSON estáticas; tokens OIDC caducan en 5 min y se renuevan al vuelo.Control de AdmisiónAttribute Condition: assertion.hostname == 'vm-app-01' y audiencia restringida.Impide que otros nodos emitan tokens válidos incluso dentro del mismo Pool.Menor Privilegio IAMRol roles/storage.objectAdmin vinculado únicamente a nivel de Bucket (no de proyecto).Acota el radio de impacto (blast radius) exclusivamente al repositorio de respaldos.Aislamiento de DatosVM de BD sin salida a Internet; usuario MySQL restringido a IP 10.0.2.20 y --no-tablespaces.Elimina exposición directa a Internet y evita otorgar privilegios globales PROCESS.Seguridad en RuntimeContraseña de BD inyectada vía variable de entorno MYSQL_PWD en systemd.Evita la exposición de credenciales en argumentos de procesos (ps aux).Gobierno y FinOpsBucket Standard en us-central1 (< 5 GB) + Lifecycle Rule (Delete cuando age >= 7).Costo operativo de $0.00 USD (Always Free Tier) sin acumulación histórica.
+
+5. Guía de Implementación Reproducible
+Paso 1: Aprovisionamiento en Google Cloud Platform (gcp/setup_gcp_wif.sh)
+Bash
+export PROJECT_ID="<TU_PROJECT_ID>"
+export PROJECT_NUMBER="<TU_PROJECT_NUMBER>"
+export REGION="us-central1"
+export BUCKET_NAME="harvester-wif-lab-${PROJECT_ID}"
+export SA_NAME="sa-harvester-app"
+export POOL_ID="harvester-onprem-pool"
+export PROVIDER_ID="harvester-oidc-provider"
+
+gcloud config set project $PROJECT_ID
+
+# 1. Habilitar APIs necesarias
+gcloud services enable \
+  iam.googleapis.com \
+  cloudresourcemanager.googleapis.com \
+  iamcredentials.googleapis.com \
+  sts.googleapis.com \
+  storage.googleapis.com
+
+# 2. Crear Bucket regional (Always Free Tier) y Service Account con menor privilegio
+gcloud storage buckets create gs://${BUCKET_NAME} \
+  --location=${REGION} \
+  --uniform-bucket-level-access
+
+gcloud iam service-accounts create ${SA_NAME} \
+  --display-name="Harvester App Workload SA"
+
+gcloud storage buckets add-iam-policy-binding gs://${BUCKET_NAME} \
+  --member="serviceAccount:${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/storage.objectAdmin"
+
+# 3. Crear Workload Identity Pool y OIDC Provider con JWKS público
+gcloud iam workload-identity-pools create ${POOL_ID} \
+  --location="global" \
+  --display-name="Harvester On-Premise Pool"
+
+gcloud iam workload-identity-pools providers create-oidc ${PROVIDER_ID} \
+  --location="global" \
+  --workload-identity-pool=${POOL_ID} \
+  --display-name="Harvester Local OIDC Provider" \
+  --issuer-uri="[https://idp.harvester.local](https://idp.harvester.local)" \
+  --allowed-audiences="[https://iam.googleapis.com/projects/$](https://iam.googleapis.com/projects/$){PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/providers/${PROVIDER_ID}" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.host=assertion.hostname" \
+  --attribute-condition="assertion.hostname == 'vm-app-01'" \
+  --jwk-json-path="jwks.json"
+
+# 4. Autorizar impersonación para el sujeto vm-app-01
+gcloud iam service-accounts add-iam-policy-binding \
+  "${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="principal://[iam.googleapis.com/projects/$](https://iam.googleapis.com/projects/$){PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/subject/vm-app-01"
+
+
+
